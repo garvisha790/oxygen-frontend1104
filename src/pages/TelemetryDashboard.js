@@ -192,22 +192,43 @@ const TelemetryDashboard = () => {
   }, [selectedPlant]); // Fetch devices when the plant selection changes
   
   const fetchLatestEntry = useCallback(async () => {
-    if (!selectedDevice) {
-      
-      return;
-    }
-   
-    try {
-      const data = await getLatestTelemetryEntry(selectedDevice); // Pass deviceId
-      setLatestEntry(data);
-    
-    } catch (error) {
-      console.error("❌ Error fetching latest telemetry:", error);
-      
-      setError("Failed to fetch latest telemetry data.");
-    }
-  }, [selectedDevice]);
+    if (!selectedDevice) return;
   
+    try {
+      const data = await getLatestTelemetryEntry(selectedDevice);
+      console.log("Latest telemetry entry:", data);
+      if (data) {
+        // Properly normalize the data structure
+        const normalized = {
+          alerts: Array.isArray(data.alerts) ? data.alerts : [],
+          temperature: typeof data.temperature === 'object' ? 
+            data.temperature.value : 
+            typeof data.temperature === 'number' ? 
+              data.temperature : 0,
+          humidity: typeof data.humidity === 'object' ? 
+            data.humidity.value : 
+            typeof data.humidity === 'number' ? 
+              data.humidity : 0,
+          oilLevel: typeof data.oilLevel === 'object' ? 
+            data.oilLevel.value : 
+            typeof data.oilLevel === 'number' ? 
+              data.oilLevel : 0
+        };
+
+        console.log("Normalized latest entry:", normalized);
+      setLatestEntry(normalized);
+      setConnectionStatus("connected");
+    } else {
+      setLatestEntry(null);
+      setConnectionStatus("no data");
+    }
+  } catch (error) {
+    console.error("❌ Error fetching latest telemetry:", error);
+    setLatestEntry(null);
+    setConnectionStatus("error");
+  }
+}, [selectedDevice]);
+
   const fetchRealtimeData = useCallback(async () => {
     if (!selectedDevice) return;
 
@@ -350,6 +371,7 @@ const TelemetryDashboard = () => {
       );
     }
 
+    console.log("latestEntry:", telemetryData);
     return (
       <Box sx={{ mt: 3 }}>
         <Typography variant="h6" fontWeight="bold" mb={2}>
@@ -362,26 +384,25 @@ const TelemetryDashboard = () => {
           mb: 3 
         }}>
           <MetricCircle 
-  value={latestEntry?.openAlerts?.value ?? latestEntry?.openAlerts ?? 0}
-  label="Open Alerts" 
-  color="#f44336"
-/>
+            value={latestEntry.alerts?.length || 0}
+            label="Open Alerts" 
+            color="#f44336"
+          />
+          <MetricCircle 
+            value={Number(latestEntry.temperature).toFixed(1)}
+            label="Temperature" 
+            color="#ff9800"
+          />
 <MetricCircle 
-  value={latestEntry?.temperature?.value ?? latestEntry?.temperature ?? 0}
-  label="Temperature" 
-  color="#ff9800"
-/>
-<MetricCircle 
-  value={latestEntry?.humidity?.value ?? latestEntry?.humidity ?? 0}
-  label="Humidity" 
-  color="#2196f3"
-/>
-<MetricCircle 
-  value={latestEntry?.oilLevel?.value ?? latestEntry?.oilLevel ?? 0}
-  label="Oil Level" 
-  color="#4caf50"
-/>
-
+          value={Number(latestEntry.humidity).toFixed(1)}
+          label="Humidity" 
+          color="#2196f3"
+        />
+        <MetricCircle 
+          value={Number(latestEntry.oilLevel).toFixed(1)}
+          label="Oil Level" 
+          color="#4caf50"
+        />
       </Box>
     </Box>
   );
