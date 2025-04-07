@@ -125,7 +125,7 @@ const DeviceDashboard = () => {
         }}
       >
         <Typography variant="h4" fontWeight="bold" mb={3}>
-          Device Dashboard
+          Device Management
         </Typography>
 
         {/* Select Plant */}

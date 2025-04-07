@@ -1,15 +1,23 @@
 import React from 'react';
-import { Drawer, List, ListItem, ListItemButton, ListItemText, ListItemIcon } from '@mui/material';
+import { Drawer, List, ListItem, ListItemButton, ListItemText, ListItemIcon, Divider } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import DevicesIcon from '@mui/icons-material/Devices';
 import InsightsIcon from '@mui/icons-material/Insights';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { useAuth } from '../context/AuthContext'; // Adjust path if needed
 
 const drawerWidth = 220;
 
 const Sidebar = ({ children }) => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();          // clear token and user
+    navigate('/login'); // redirect to login
+  };
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, route: '/dashboard' },
@@ -41,6 +49,17 @@ const Sidebar = ({ children }) => {
             </ListItemButton>
           </ListItem>
         ))}
+      </List>
+
+      <Divider sx={{ bgcolor: 'white', my: 2 }} />
+
+      <List>
+        <ListItem disablePadding>
+          <ListItemButton onClick={handleLogout}>
+            <ListItemIcon sx={{ color: 'white' }}><LogoutIcon /></ListItemIcon>
+            <ListItemText primary="Logout" />
+          </ListItemButton>
+        </ListItem>
       </List>
     </Drawer>
   );

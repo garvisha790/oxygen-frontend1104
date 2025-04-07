@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { getPlants } from "../services/plantService";
 import { getDevices } from "../services/deviceService";
+import { getThresholdValue, updateThresholdValue } from '../services/telemetryService';
+
 import { 
   getLatestTelemetryEntry, 
   getRealtimeTelemetryData, 
@@ -8,6 +10,8 @@ import {
   clearDeviceCache 
 } from "../services/telemetryService";
 import { Line } from "react-chartjs-2";
+import TextField from '@mui/material/TextField';
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -111,6 +115,14 @@ const MetricCircle = ({ value, label, color, size = 100, thickness = 5 }) => {
 };
 
 const TelemetryDashboard = () => {
+  const [selectedConfigType, setSelectedConfigType] = useState('');
+  const [selectedCommandType, setSelectedCommandType] = useState("");
+  const [liveCommandValue, setLiveCommandValue] = useState('');
+  const [selectedMetric, setSelectedMetric] = useState(null);
+  const [currentThreshold, setCurrentThreshold] = useState('');
+  const [threshold, setThreshold] = useState('');
+
+  const [newThreshold, setNewThreshold] = useState('');
   const theme = useTheme();
   const [plants, setPlants] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -166,6 +178,7 @@ const TelemetryDashboard = () => {
     fetchPlants();
   }, []); // Run only once on mount
   
+
   useEffect(() => {
     const fetchDevices = async () => {
       if (!selectedPlant) {
@@ -268,6 +281,28 @@ const TelemetryDashboard = () => {
   }, [selectedDevice]);
   
   useEffect(() => {
+    const fetchThreshold = async () => {
+      if (selectedDevice && selectedConfigType) {
+        const threshold = await getThresholdValue(selectedDevice, selectedConfigType.toLowerCase());
+        setCurrentThreshold(threshold);
+      }
+    };
+    fetchThreshold();
+  }, [selectedDevice, selectedConfigType]);
+
+  const handleThresholdUpdate = async () => {
+    if (!newThreshold || isNaN(newThreshold)) return alert("Please enter a valid number");
+    const success = await updateThresholdValue(selectedDevice, selectedConfigType.toLowerCase(), newThreshold);
+    if (success) {
+      alert(`${selectedConfigType} threshold updated successfully!`);
+      setCurrentThreshold(newThreshold);
+      setNewThreshold('');
+    } else {
+      alert("Failed to update threshold. Try again.");
+    }
+  };
+  
+  useEffect(() => {
     if (!selectedDevice) return;
 
     // Initial data fetch - all at once
@@ -346,16 +381,96 @@ const TelemetryDashboard = () => {
   };
 
   // Render the command center tab content
-  const renderCommandCenterTab = () => {
-    return (
-      <Box sx={{ textAlign: 'center', py: 2 }}>
-        <Typography variant="body1" color="text.secondary">
-          Command Center functionality coming soon
-        </Typography>
-      </Box>
-    );
-  };
+  const renderCommandCenterTab = () => (
+    <Box>
+  {/* Dropdown to choose metric */}
+  <FormControl fullWidth sx={{ mb: 2 }}>
+    <InputLabel>Select Metric</InputLabel>
+    <Select
+      value={selectedMetric}
+      onChange={(e) => setSelectedMetric(e.target.value)}
+      label="Select Metric"
+    >
+      <MenuItem value="temperature">Temperature</MenuItem>
+      <MenuItem value="humidity">Humidity</MenuItem>
+      <MenuItem value="oilLevel">Oil Level</MenuItem>
+    </Select>
+  </FormControl>
 
+  {/* Show current threshold */}
+  {currentThreshold !== null && (
+    <Box sx={{ mb: 2 }}>
+      <Typography variant="subtitle1">
+        Current Threshold: <strong>{currentThreshold}</strong>
+      </Typography>
+    </Box>
+  )}
+
+  {/* Input to update threshold */}
+  <TextField
+    label="Enter Threshold"
+    variant="outlined"
+    fullWidth
+    value={threshold}
+    onChange={(e) => {
+      const value = e.target.value;
+      if (/^\d*\.?\d*$/.test(value)) {
+        setThreshold(value); // Only numbers allowed
+      }
+    }}
+    sx={{ mb: 2 }}
+  />
+
+  {/* Update Config Button */}
+  <Button
+    variant="contained"
+    fullWidth
+    onClick={async () => {
+      if (threshold === '') {
+        alert('Please enter a valid number');
+        return;
+      }
+
+      try {
+        const response = await fetch('http://10.178.20.127:3000/api/device/command', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            threshold: parseFloat(threshold),
+            deviceId: selectedDevice,
+            metric: selectedMetric
+          }),
+        });
+
+        const result = await response.json();
+        console.log('Threshold updated:', result);
+        setCurrentThreshold(threshold); // Save it in UI
+      } catch (err) {
+        console.error('Error updating threshold:', err);
+        alert('Failed to update config');
+      }
+    }}
+    sx={{ mb: 2 }}
+  >
+    Update Config
+  </Button>
+
+  {/* Restart Device Button */}
+  <Button
+    variant="outlined"
+    color="error"
+    fullWidth
+    onClick={() => {
+      setThreshold('');
+      setCurrentThreshold(null);
+    }}
+  >
+    Restart Device
+  </Button>
+</Box>
+  );
   // Render device metrics in the status tab
   const renderDeviceMetrics = () => {
     if (!latestEntry) {
@@ -371,7 +486,7 @@ const TelemetryDashboard = () => {
       );
     }
 
-    console.log("latestEntry:", telemetryData);
+    //console.log("latestEntry:", telemetryData);
     return (
       <Box sx={{ mt: 3 }}>
         <Typography variant="h6" fontWeight="bold" mb={2}>
@@ -624,8 +739,8 @@ const TelemetryDashboard = () => {
                 {activeTab === "alarms" && latestEntry && (
                   <Typography variant="caption" sx={{ ml: 1 }}>
                     {latestEntry.openAlerts || 0} Open Alerts
-                    console.log("latestEntry:", latestEntry);
-console.log("Type of latestEntry.openAlerts:", typeof latestEntry.openAlerts);
+                    
+              
 
                   </Typography>
                 )}

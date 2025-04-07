@@ -141,7 +141,32 @@ export const getDeviceList = async () => {
     return [];
   }
 };
+export const getThresholdValue = async (deviceId, type) => {
+  try {
+    const response = await axiosInstance.get(`${BASE_URL}/telemetry/threshold/${deviceId}/${type}`);
+    return response.data?.threshold;
+  } catch (error) {
+    console.error("❌ Error fetching threshold value:", error);
+    return null;
+  }
+};
 
+export const updateThresholdValue = async (deviceId, type, value) => {
+  try {
+    const response = await axiosInstance.post(`${BASE_URL}/telemetry/threshold/${deviceId}/${type}`, {
+      threshold: value,
+    });
+    return response.status === 200;
+  } catch (error) {
+    console.error("❌ Error updating threshold value:", error);
+    return false;
+  }
+};
+
+export const updateThreshold = async (deviceId, data) => {
+  const response = await axios.post(`/api/telemetry/threshold/${deviceId}`, data);
+  return response.data;
+};
 /**
  * Clear cache for a specific device
  */

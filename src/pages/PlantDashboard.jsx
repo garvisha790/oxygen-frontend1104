@@ -26,6 +26,8 @@ const PlantDashboard = () => {
   const [location, setLocation] = useState("");
   const [capacity, setCapacity] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [selectedPlant, setSelectedPlant] = useState(null);
 
   useEffect(() => {
     fetchPlants();
@@ -49,18 +51,58 @@ const PlantDashboard = () => {
         isActive,
       });
       setPlants([...plants, response.data]);
-      setPlantName("");
-      setLocation("");
-      setCapacity("");
-      setIsActive(true);
+      clearForm();
     } catch (err) {
       console.error("Error adding plant:", err);
     }
   };
 
+  const clearForm = () => {
+    setPlantName("");
+    setLocation("");
+    setCapacity("");
+    setIsActive(true);
+    setEditMode(false);
+    setSelectedPlant(null);
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this plant?")) {
+      try {
+        await axios.delete(`http://localhost:5000/api/plants/${id}`);
+        fetchPlants();
+      } catch (err) {
+        console.error("Error deleting plant:", err);
+      }
+    }
+  };
+
+  const handleEdit = (plant) => {
+    setEditMode(true);
+    setSelectedPlant(plant);
+    setPlantName(plant.plantName);
+    setLocation(plant.location);
+    setCapacity(plant.capacity);
+    setIsActive(plant.isActive);
+  };
+
+  const updatePlant = async () => {
+    try {
+      await axios.put(`http://localhost:5000/api/plants/${selectedPlant._id}`, {
+        plantName,
+        location,
+        capacity: parseInt(capacity),
+        isActive,
+      });
+      fetchPlants();
+      clearForm();
+    } catch (err) {
+      console.error("Error updating plant:", err);
+    }
+  };
+
   return (
     <Box sx={{ display: "flex" }}>
-      {/* Fixed Sidebar */}
       <Drawer
         variant="permanent"
         sx={{
@@ -74,27 +116,16 @@ const PlantDashboard = () => {
           },
         }}
       >
-        <Sidebar /> {/* ✅ Sidebar Component */}
+        <Sidebar />
       </Drawer>
 
-      {/* Main Content */}
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          bgcolor: "#f5f5f5",
-          p: 3,
-          minHeight: "100vh",
-        }}
-      >
+      <Box component="main" sx={{ flexGrow: 1, bgcolor: "#f5f5f5", p: 3, minHeight: "100vh" }}>
         <Typography variant="h4" fontWeight="bold" mb={3}>
           Plant Dashboard
         </Typography>
-
-        {/* Add Plant Form */}
         <Paper sx={{ padding: "16px", marginBottom: "20px" }}>
           <Typography variant="h6" gutterBottom>
-            Add New Plant
+            {editMode ? "Edit Plant" : "Add New Plant"}
           </Typography>
           <Box sx={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             <TextField
@@ -122,18 +153,28 @@ const PlantDashboard = () => {
             <Select
               value={isActive}
               size="small"
-              onChange={(e) => setIsActive(e.target.value === "true")}
+              onChange={(e) => setIsActive(e.target.value === "true" || e.target.value === true)}
             >
               <MenuItem value="true">Active</MenuItem>
               <MenuItem value="false">Inactive</MenuItem>
             </Select>
-            <Button variant="contained" color="primary" onClick={addPlant}>
-              Add Plant
-            </Button>
+            {editMode ? (
+              <>
+                <Button variant="contained" color="secondary" onClick={updatePlant}>
+                  Update
+                </Button>
+                <Button variant="outlined" onClick={clearForm}>
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button variant="contained" color="primary" onClick={addPlant}>
+                Add Plant
+              </Button>
+            )}
           </Box>
         </Paper>
 
-        {/* Plant Table */}
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -142,15 +183,24 @@ const PlantDashboard = () => {
                 <TableCell sx={{ color: "white", fontWeight: "bold" }}>Location</TableCell>
                 <TableCell sx={{ color: "white", fontWeight: "bold" }}>Capacity</TableCell>
                 <TableCell sx={{ color: "white", fontWeight: "bold" }}>Status</TableCell>
+                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {plants.map((plant, index) => (
-                <TableRow key={index}>
+              {plants.map((plant) => (
+                <TableRow key={plant._id}>
                   <TableCell>{plant.plantName}</TableCell>
                   <TableCell>{plant.location}</TableCell>
                   <TableCell>{plant.capacity}</TableCell>
                   <TableCell>{plant.isActive ? "Active" : "Inactive"}</TableCell>
+                  <TableCell>
+                    <Button size="small" color="primary" onClick={() => handleEdit(plant)}>
+                      Edit
+                    </Button>
+                    <Button size="small" color="error" onClick={() => handleDelete(plant._id)}>
+                      Delete
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

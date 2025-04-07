@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../context/AuthContext"; // <-- import this
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth(); // <-- get login function from context
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -14,7 +16,13 @@ const Login = () => {
         email,
         password,
       });
-      localStorage.setItem("token", res.data.token);
+
+      const token = res.data.token;
+
+      // Optional: fetch user info here if needed
+      const userData = { email }; // Replace with actual user if backend returns it
+
+      login(token, userData); // <-- update context state here
       navigate("/dashboard");
     } catch (err) {
       alert("Invalid credentials");
