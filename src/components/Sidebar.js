@@ -22,7 +22,7 @@ const Sidebar = ({ children }) => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, route: '/dashboard' },
     { text: 'Plant Dashboard', icon: <AccountTreeIcon />, route: '/plant-dashboard' },
-    { text: 'Device Dashboard', icon: <DevicesIcon />, route: '/device-dashboard' },
+    { text: 'Device Management', icon: <DevicesIcon />, route: '/device-dashboard' },
     { text: 'Telemetry Dashboard', icon: <InsightsIcon />, route: '/telemetry-dashboard' },
   ];
 
