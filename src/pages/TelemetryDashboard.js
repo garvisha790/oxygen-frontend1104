@@ -508,7 +508,7 @@ const TelemetryDashboard = () => {
             label="Temperature" 
             color="#ff9800"
           />
-<MetricCircle 
+        <MetricCircle 
           value={Number(latestEntry.humidity).toFixed(1)}
           label="Humidity" 
           color="#2196f3"

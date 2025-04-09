@@ -41,17 +41,19 @@ const Login = () => {
       setLoading(false);
     }
   };
-
+ 
   return (
     <Box
-      display="flex"
-      height="100vh"
-      justifyContent="center"
-      alignItems="center"
-      sx={{
-        background: "linear-gradient(to right, #e6f7ff, #f0f9ff)",
-      }}
-    >
+  display="flex"
+  height="100vh"
+  width="100vw"
+  justifyContent="center"
+  alignItems="center"
+  sx={{
+    background: "linear-gradient(to right, #e6f7ff, #f0f9ff)",
+    overflow: "hidden", // <-- add this too
+  }}
+>
       <Card
         sx={{
           width: 400,
