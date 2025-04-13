@@ -1,12 +1,38 @@
 import axios from 'axios';
-
-const API_BASE_URL = 'http://10.178.20.124:5000/api';
-
+ 
+const API_BASE_URL = 'http://localhost:5000/api';
+ 
+// Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 5000,
 });
-
+ 
+// Add request interceptor to include JWT token in headers
+api.interceptors.request.use(
+  config => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  error => Promise.reject(error)
+);
+ 
+// Handle token expiration
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response && error.response.status === 401) {
+      // Token expired or invalid
+      localStorage.removeItem('token');
+      window.location.href = '/';
+    }
+    return Promise.reject(error);
+  }
+);
+ 
 export const getSiteData = async (siteName) => {
   try {
     const response = await api.get(`/sites/${siteName}`);
@@ -16,7 +42,7 @@ export const getSiteData = async (siteName) => {
     throw error;
   }
 };
-
+ 
 export const getDeviceDetails = async (siteName) => {
   try {
     const response = await api.get(`/devices/${siteName}`);
@@ -26,7 +52,7 @@ export const getDeviceDetails = async (siteName) => {
     throw error;
   }
 };
-
+ 
 export const getSiteLogs = async (siteName) => {
   try {
     const response = await api.get(`/logs/${siteName}`);
@@ -36,7 +62,7 @@ export const getSiteLogs = async (siteName) => {
     throw error;
   }
 };
-
+ 
 export const getSiteAlerts = async (siteName) => {
   try {
     const response = await api.get(`/alerts/${siteName}`);
@@ -46,7 +72,7 @@ export const getSiteAlerts = async (siteName) => {
     throw error;
   }
 };
-
+ 
 export const registerUser = async (userData) => {
   try {
     const response = await api.post('/auth/register', userData);
@@ -56,7 +82,7 @@ export const registerUser = async (userData) => {
     throw error;
   }
 };
-
+ 
 export const loginUser = async (userData) => {
   try {
     const response = await api.post('/auth/login', userData);
@@ -66,3 +92,5 @@ export const loginUser = async (userData) => {
     throw error;
   }
 };
+
+export default api;

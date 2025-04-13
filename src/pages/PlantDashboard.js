@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import {
-  Box,
-  Drawer,
   Typography,
   Table,
   TableBody,
@@ -16,10 +14,10 @@ import {
   MenuItem,
   Button,
   Grid,
+  Box,
+  
 } from "@mui/material";
-import Sidebar from "../components/Sidebar";
-
-const drawerWidth = 200;
+import Layout from "../components/Layout";
 
 const PlantDashboard = () => {
   const [plants, setPlants] = useState([]);
@@ -103,143 +101,117 @@ const PlantDashboard = () => {
   };
 
   return (
-    <Box sx={{ display: "flex" }}>
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          [`& .MuiDrawer-paper`]: {
-            width: drawerWidth,
-            boxSizing: "border-box",
-            backgroundColor: "#0d47a1",
-            color: "white",
-          },
-        }}
-      >
-        <Sidebar />
-      </Drawer>
+    <>
+      <Typography variant="h4" fontWeight="bold" gutterBottom>
+        Plant Dashboard
+      </Typography>
 
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          bgcolor: "#f3f6fc",
-          p: 4,
-          minHeight: "100vh",
-        }}
-      >
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
-          Plant Dashboard
+      <Paper sx={{ p: 3, mb: 4, borderRadius: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          {editMode ? "Edit Plant" : "Add New Plant"}
         </Typography>
 
-        <Paper sx={{ p: 3, mb: 4, borderRadius: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            {editMode ? "Edit Plant" : "Add New Plant"}
-          </Typography>
-
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
-              <TextField
-                fullWidth
-                label="Plant Name"
-                value={plantName}
-                onChange={(e) => setPlantName(e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <TextField
-                fullWidth
-                label="Location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <TextField
-                fullWidth
-                label="Capacity"
-                type="number"
-                value={capacity}
-                onChange={(e) => setCapacity(e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={2}>
-              <Select
-                fullWidth
-                value={isActive}
-                onChange={(e) =>
-                  setIsActive(e.target.value === "true" || e.target.value === true)
-                }
-              >
-                <MenuItem value="true">Active</MenuItem>
-                <MenuItem value="false">Inactive</MenuItem>
-              </Select>
-            </Grid>
-            <Grid item xs={12} sm={6} md={1}>
-              {editMode ? (
-                <>
-                  <Button fullWidth variant="contained" onClick={updatePlant}>
-                    Update
-                  </Button>
-                  <Button
-                    fullWidth
-                    variant="text"
-                    onClick={clearForm}
-                    sx={{ mt: 1 }}
-                  >
-                    Cancel
-                  </Button>
-                </>
-              ) : (
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              fullWidth
+              label="Plant Name"
+              value={plantName}
+              onChange={(e) => setPlantName(e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              fullWidth
+              label="Location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              fullWidth
+              label="Capacity"
+              type="number"
+              value={capacity}
+              onChange={(e) => setCapacity(e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={2}>
+            <Select
+              fullWidth
+              value={isActive}
+              onChange={(e) =>
+                setIsActive(e.target.value === "true" || e.target.value === true)
+              }
+            >
+              <MenuItem value="true">Active</MenuItem>
+              <MenuItem value="false">Inactive</MenuItem>
+            </Select>
+          </Grid>
+          <Grid item xs={12} sm={6} md={1}>
+            {editMode ? (
+              <>
+                <Button fullWidth variant="contained" onClick={updatePlant}>
+                  Update
+                </Button>
                 <Button
                   fullWidth
-                  variant="contained"
-                  onClick={addPlant}
-                  sx={{ height: "100%" }}
+                  variant="text"
+                  onClick={clearForm}
+                  sx={{ mt: 1 }}
                 >
-                  Add
+                  Cancel
                 </Button>
-              )}
-            </Grid>
+              </>
+            ) : (
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={addPlant}
+                sx={{ height: "100%" }}
+              >
+                Add
+              </Button>
+            )}
           </Grid>
-        </Paper>
+        </Grid>
+      </Paper>
 
-        <Paper sx={{ borderRadius: 3 }}>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: "#0d47a1" }}>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>Plant Name</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>Location</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>Capacity</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>Status</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>Actions</TableCell>
+      <Paper sx={{ borderRadius: 3 }}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: "#0d47a1" }}>
+                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Plant Name</TableCell>
+                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Location</TableCell>
+                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Capacity</TableCell>
+                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Status</TableCell>
+                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {plants.map((plant) => (
+                <TableRow key={plant._id}>
+                  <TableCell>{plant.plantName}</TableCell>
+                  <TableCell>{plant.location}</TableCell>
+                  <TableCell>{plant.capacity}</TableCell>
+                  <TableCell>{plant.isActive ? "Active" : "Inactive"}</TableCell>
+                  <TableCell>
+                    <Button size="small" color="primary" onClick={() => handleEdit(plant)}>
+                      Edit
+                    </Button>
+                    <Button size="small" color="error" onClick={() => handleDelete(plant._id)}>
+                      Delete
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {plants.map((plant) => (
-                  <TableRow key={plant._id}>
-                    <TableCell>{plant.plantName}</TableCell>
-                    <TableCell>{plant.location}</TableCell>
-                    <TableCell>{plant.capacity}</TableCell>
-                    <TableCell>{plant.isActive ? "Active" : "Inactive"}</TableCell>
-                    <TableCell>
-                      <Button size="small" color="primary" onClick={() => handleEdit(plant)}>
-                        Edit
-                      </Button>
-                      <Button size="small" color="error" onClick={() => handleDelete(plant._id)}>
-                        Delete
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      </Box>
-    </Box>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+    </>
   );
 };
 

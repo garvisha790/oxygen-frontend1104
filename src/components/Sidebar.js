@@ -1,33 +1,25 @@
 import React from 'react';
-import { Drawer, List, ListItem, ListItemButton, ListItemText, ListItemIcon, Divider } from '@mui/material';
+import { Drawer, List, ListItem, ListItemButton, ListItemText, ListItemIcon, Divider, Box } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import DevicesIcon from '@mui/icons-material/Devices';
 import InsightsIcon from '@mui/icons-material/Insights';
-import LogoutIcon from '@mui/icons-material/Logout';
-import { useAuth } from '../context/AuthContext'; // Adjust path if needed
-
+ 
 const drawerWidth = 220;
-
-const Sidebar = ({ children }) => {
+ 
+const Sidebar = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();          // clear token and user
-    navigate('/login'); // redirect to login
-  };
-
+ 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, route: '/dashboard' },
     { text: 'Plant Dashboard', icon: <AccountTreeIcon />, route: '/plant-dashboard' },
     { text: 'Device Management', icon: <DevicesIcon />, route: '/device-dashboard' },
     { text: 'Telemetry Dashboard', icon: <InsightsIcon />, route: '/telemetry-dashboard' },
   ];
-
+ 
   return (
-    <Drawer
+<Drawer
       variant="permanent"
       sx={{
         width: drawerWidth,
@@ -39,30 +31,20 @@ const Sidebar = ({ children }) => {
           color: 'white',
         },
       }}
-    >
-      <List>
+>
+<Box sx={{ height: '64px' }} /> {/* Space for the app bar */}
+<List>
         {menuItems.map((item, index) => (
-          <ListItem key={index} disablePadding>
-            <ListItemButton onClick={() => navigate(item.route)}>
-              <ListItemIcon sx={{ color: 'white' }}>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
+<ListItem key={index} disablePadding>
+<ListItemButton onClick={() => navigate(item.route)}>
+<ListItemIcon sx={{ color: 'white' }}>{item.icon}</ListItemIcon>
+<ListItemText primary={item.text} />
+</ListItemButton>
+</ListItem>
         ))}
-      </List>
-
-      <Divider sx={{ bgcolor: 'white', my: 2 }} />
-
-      <List>
-        <ListItem disablePadding>
-          <ListItemButton onClick={handleLogout}>
-            <ListItemIcon sx={{ color: 'white' }}><LogoutIcon /></ListItemIcon>
-            <ListItemText primary="Logout" />
-          </ListItemButton>
-        </ListItem>
-      </List>
-    </Drawer>
+</List>
+</Drawer>
   );
 };
-
+ 
 export default Sidebar;

@@ -2,6 +2,10 @@ import React, { useEffect, useState, useCallback } from "react";
 import { getPlants } from "../services/plantService";
 import { getDevices } from "../services/deviceService";
 import { getThresholdValue, updateThresholdValue } from '../services/telemetryService';
+import axios from 'axios';
+import Layout from "../components/Layout";
+import AlarmsTab from '../components/siteView/AlarmsTab';
+import { useLocation } from 'react-router-dom';
 
 import { 
   getLatestTelemetryEntry, 
@@ -54,10 +58,31 @@ import {
   Grid,
   Divider,
   TableContainer,
+  Tabs,
+  Tab
 } from "@mui/material";
 
-import Sidebar from "../components/Sidebar";
 import { useTheme } from '@mui/material/styles';
+
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+ 
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
 
 // Custom circular progress visualization component that matches the reference UI
 const MetricCircle = ({ value, label, color, size = 100, thickness = 5 }) => {
@@ -78,7 +103,7 @@ const MetricCircle = ({ value, label, color, size = 100, thickness = 5 }) => {
       }}>
         <CircularProgress
           variant="determinate"
-          value={75} // Fixed angle for the visual style
+          value={100} // Fixed angle for the visual style
           size={size}
           thickness={thickness}
           sx={{ 
@@ -121,9 +146,10 @@ const TelemetryDashboard = () => {
   const [selectedMetric, setSelectedMetric] = useState(null);
   const [currentThreshold, setCurrentThreshold] = useState('');
   const [threshold, setThreshold] = useState('');
-
   const [newThreshold, setNewThreshold] = useState('');
+  
   const theme = useTheme();
+  const location = useLocation();
   const [plants, setPlants] = useState([]);
   const [devices, setDevices] = useState([]);
   const [selectedPlant, setSelectedPlant] = useState("");
@@ -133,8 +159,22 @@ const TelemetryDashboard = () => {
   const [realtimeData, setRealtimeData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("status");
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
+
+  // Get tab from URL or use default
+  const tabFromURL = new URLSearchParams(location.search).get('tab');
+  const [activeTab, setActiveTab] = useState('status'); // default is 'status'
+
+  // Update active tab based on URL when component mounts or URL changes
+  useEffect(() => {
+    if (tabFromURL) {
+      setActiveTab(tabFromURL);
+    }
+  }, [tabFromURL]);
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
 
   const chartOptions = {
     responsive: true,
@@ -158,7 +198,7 @@ const TelemetryDashboard = () => {
       }
     }
   };
-
+  
   useEffect(() => {
     const fetchPlants = async () => {
       try {
@@ -182,7 +222,6 @@ const TelemetryDashboard = () => {
   useEffect(() => {
     const fetchDevices = async () => {
       if (!selectedPlant) {
-        
         return;
       }
      
@@ -229,26 +268,25 @@ const TelemetryDashboard = () => {
         };
 
         console.log("Normalized latest entry:", normalized);
-      setLatestEntry(normalized);
-      setConnectionStatus("connected");
-    } else {
+        setLatestEntry(normalized);
+        setConnectionStatus("connected");
+      } else {
+        setLatestEntry(null);
+        setConnectionStatus("no data");
+      }
+    } catch (error) {
+      console.error("❌ Error fetching latest telemetry:", error);
       setLatestEntry(null);
-      setConnectionStatus("no data");
+      setConnectionStatus("error");
     }
-  } catch (error) {
-    console.error("❌ Error fetching latest telemetry:", error);
-    setLatestEntry(null);
-    setConnectionStatus("error");
-  }
-}, [selectedDevice]);
+  }, [selectedDevice]);
 
   const fetchRealtimeData = useCallback(async () => {
     if (!selectedDevice) return;
 
     try {
       const data = await getRealtimeTelemetryData(selectedDevice);
-      
-        setRealtimeData(data);
+      setRealtimeData(data);
     } catch (error) {
       console.error("❌ Error fetching realtime data:", error);
       setRealtimeData([]);
@@ -292,12 +330,31 @@ const TelemetryDashboard = () => {
 
   const handleThresholdUpdate = async () => {
     if (!newThreshold || isNaN(newThreshold)) return alert("Please enter a valid number");
-    const success = await updateThresholdValue(selectedDevice, selectedConfigType.toLowerCase(), newThreshold);
-    if (success) {
-      alert(`${selectedConfigType} threshold updated successfully!`);
-      setCurrentThreshold(newThreshold);
-      setNewThreshold('');
-    } else {
+    
+    try {
+      // Create command payload using the correct format
+      const commandPayload = {
+        deviceName: devices.find(d => d._id === selectedDevice)?.deviceName || "esp32_02",
+        command: "updateThreshold",
+        value: {
+          [`${selectedConfigType}Threshold`]: parseInt(newThreshold)
+        }
+      };
+      
+      // Send command to the correct endpoint using axios
+      const response = await axios.post('http://localhost:3000/api/device/command', commandPayload);
+
+      console.log('Command sent:', response.data);
+      
+      if (response.status === 200) {
+        alert(`${selectedConfigType} threshold updated successfully!`);
+        setCurrentThreshold(newThreshold);
+        setNewThreshold('');
+      } else {
+        alert("Failed to update threshold. Try again.");
+      }
+    } catch (error) {
+      console.error("Error updating threshold:", error);
       alert("Failed to update threshold. Try again.");
     }
   };
@@ -383,94 +440,116 @@ const TelemetryDashboard = () => {
   // Render the command center tab content
   const renderCommandCenterTab = () => (
     <Box>
-  {/* Dropdown to choose metric */}
-  <FormControl fullWidth sx={{ mb: 2 }}>
-    <InputLabel>Select Metric</InputLabel>
-    <Select
-      value={selectedMetric}
-      onChange={(e) => setSelectedMetric(e.target.value)}
-      label="Select Metric"
-    >
-      <MenuItem value="temperature">Temperature</MenuItem>
-      <MenuItem value="humidity">Humidity</MenuItem>
-      <MenuItem value="oilLevel">Oil Level</MenuItem>
-    </Select>
-  </FormControl>
+      {/* Dropdown to choose metric */}
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel>Select Metric</InputLabel>
+        <Select
+          value={selectedMetric}
+          onChange={(e) => setSelectedMetric(e.target.value)}
+          label="Select Metric"
+        >
+          <MenuItem value="temperature">Temperature</MenuItem>
+          <MenuItem value="humidity">Humidity</MenuItem>
+          <MenuItem value="oilLevel">Oil Level</MenuItem>
+        </Select>
+      </FormControl>
 
-  {/* Show current threshold */}
-  {currentThreshold !== null && (
-    <Box sx={{ mb: 2 }}>
-      <Typography variant="subtitle1">
-        Current Threshold: <strong>{currentThreshold}</strong>
-      </Typography>
+      {/* Show current threshold */}
+      {currentThreshold !== null && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle1">
+            Current Threshold: <strong>{currentThreshold}</strong>
+          </Typography>
+        </Box>
+      )}
+
+      {/* Input to update threshold */}
+      <TextField
+        label="New Threshold Value"
+        variant="outlined"
+        fullWidth
+        value={newThreshold}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (/^\d*\.?\d*$/.test(value)) {
+            setNewThreshold(value); // Only numbers allowed
+          }
+        }}
+        sx={{ mb: 2 }}
+      />
+
+      {/* Update Threshold Button */}
+      <Button
+        variant="contained"
+        fullWidth
+        onClick={handleThresholdUpdate}
+        disabled={!selectedConfigType || !newThreshold}
+        sx={{ mb: 2 }}
+      >
+        Update Threshold
+      </Button>
+
+      {/* Send Command Button */}
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel>Command Type</InputLabel>
+        <Select
+          value={selectedCommandType}
+          onChange={(e) => setSelectedCommandType(e.target.value)}
+          label="Command Type"
+        >
+          <MenuItem value="updateThreshold">Update Threshold</MenuItem>
+          <MenuItem value="restart">Restart Device</MenuItem>
+          <MenuItem value="factoryReset">Factory Reset</MenuItem>
+        </Select>
+      </FormControl>
+      
+      {/* Update Config Button */}
+      <Button
+        variant="outlined"
+        color="primary"
+        fullWidth
+        onClick={async () => {
+          if (!selectedCommandType) {
+            alert('Please select a command type');
+            return;
+          }
+
+          try {
+            // Prepare the command payload based on selected command type
+            let commandPayload = {
+              deviceName: devices.find(d => d._id === selectedDevice)?.deviceName || "esp32_02",
+              command: selectedCommandType
+            };
+
+            // For updateThreshold command, add value parameter with threshold data
+            if (selectedCommandType === "updateThreshold" && selectedConfigType) {
+              commandPayload.value = {
+                [`${selectedConfigType}Threshold`]: parseInt(newThreshold || currentThreshold)
+              };
+            }
+
+            // Use axios instead of fetch
+            const response = await axios.post('http://localhost:3000/api/device/command', commandPayload, {  
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+              }
+            });
+            
+            console.log('Command sent:', response.data);
+            alert(`Command ${selectedCommandType} sent successfully`);
+          } catch (err) {
+            console.error('Error sending command:', err);
+            alert('Failed to send command');
+          }
+        }}
+      >
+        Send Command
+      </Button>
     </Box>
-  )}
-
-  {/* Input to update threshold */}
-  <TextField
-    label="Enter Threshold"
-    variant="outlined"
-    fullWidth
-    value={threshold}
-    onChange={(e) => {
-      const value = e.target.value;
-      if (/^\d*\.?\d*$/.test(value)) {
-        setThreshold(value); // Only numbers allowed
-      }
-    }}
-    sx={{ mb: 2 }}
-  />
-
-  {/* Update Config Button */}
-  <Button
-    variant="contained"
-    fullWidth
-    onClick={async () => {
-      if (threshold === '') {
-        alert('Please enter a valid number');
-        return;
-      }
-
-      try {
-        const response = await fetch('http://10.178.20.127:3000/api/device/command', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            threshold: parseFloat(threshold),
-            deviceId: selectedDevice,
-            metric: selectedMetric
-          }),
-        });
-
-        const result = await response.json();
-        console.log('Threshold updated:', result);
-        setCurrentThreshold(threshold); // Save it in UI
-      } catch (err) {
-        console.error('Error updating threshold:', err);
-        alert('Failed to update config');
-      }
-    }}
-    sx={{ mb: 2 }}
-  >
-    Update Config
-  </Button>
-
-  {/* Restart Device Button */}
-  <Button
-    variant="outlined"
-    color="error"
-    fullWidth
-    onClick={() => {
-      setThreshold('');
-      setCurrentThreshold(null);
-    }}
-  >
-    Restart Device
-  </Button>
-</Box>
   );
+  
   // Render device metrics in the status tab
   const renderDeviceMetrics = () => {
     if (!latestEntry) {
@@ -486,7 +565,6 @@ const TelemetryDashboard = () => {
       );
     }
 
-    //console.log("latestEntry:", telemetryData);
     return (
       <Box sx={{ mt: 3 }}>
         <Typography variant="h6" fontWeight="bold" mb={2}>
@@ -508,21 +586,20 @@ const TelemetryDashboard = () => {
             label="Temperature" 
             color="#ff9800"
           />
-        <MetricCircle 
-          value={Number(latestEntry.humidity).toFixed(1)}
-          label="Humidity" 
-          color="#2196f3"
-        />
-        <MetricCircle 
-          value={Number(latestEntry.oilLevel).toFixed(1)}
-          label="Oil Level" 
-          color="#4caf50"
-        />
+          <MetricCircle 
+            value={Number(latestEntry.humidity).toFixed(1)}
+            label="Humidity" 
+            color="#2196f3"
+          />
+          <MetricCircle 
+            value={Number(latestEntry.oilLevel).toFixed(1)}
+            label="Oil Level" 
+            color="#4caf50"
+          />
+        </Box>
       </Box>
-    </Box>
-  );
-};
-
+    );
+  };
 
   const temperatureChartData = {
     labels: telemetryData?.map(entry => new Date(entry.timestamp).toLocaleTimeString()) || [],
@@ -636,166 +713,135 @@ const TelemetryDashboard = () => {
     );
   };
 
-  return (
-    <Box sx={{ display: "flex" }}>
-      <Sidebar />
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4, ml: 4 }}>
-        <Typography variant="h4" fontWeight="bold" mb={3}>
-          Telemetry Dashboard
-        </Typography>
-        
-        {/* Plant and Device Selection */}
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="plant-select-label">Select Plant</InputLabel>
-              <Select
-                labelId="plant-select-label"
-                value={selectedPlant}
-                onChange={handlePlantChange}
-                label="Select Plant"
-                disabled={loading}
-              >
-                {plants.map((plant) => (
-                  <MenuItem key={plant._id} value={plant._id}>
-                    {plant.plantName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <FormControl fullWidth sx={{ mb: 2 }} disabled={!selectedPlant || loading}>
-              <InputLabel id="device-select-label">Select Device</InputLabel>
-              <Select
-                labelId="device-select-label"
-                value={selectedDevice}
-                onChange={handleDeviceChange}
-                label="Select Device"
-              >
-                {devices.map((device) => (
-                  <MenuItem key={device._id} value={device._id}>
-                    {device.deviceName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+  const dashboardContent = (
+    <Container maxWidth="lg" sx={{ mt: 0.6, mb: 4 }}>
+      <Typography variant="h4" fontWeight="bold" mb={3}>
+        Telemetry Dashboard
+      </Typography>
+      
+      {/* Plant and Device Selection */}
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel id="plant-select-label">Select Plant</InputLabel>
+            <Select
+              labelId="plant-select-label"
+              value={selectedPlant}
+              onChange={handlePlantChange}
+              label="Select Plant"
+              disabled={loading}
+            >
+              {plants.map((plant) => (
+                <MenuItem key={plant._id} value={plant._id}>
+                  {plant.plantName}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Grid>
-
-        {/* Loading indicator */}
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-            <CircularProgress />
-          </Box>
-        )}
         
-        {/* Tab navigation */}
-        {selectedDevice && !loading && (
-          <>
-            <Box 
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth sx={{ mb: 2 }} disabled={!selectedPlant || loading}>
+            <InputLabel id="device-select-label">Select Device</InputLabel>
+            <Select
+              labelId="device-select-label"
+              value={selectedDevice}
+              onChange={handleDeviceChange}
+              label="Select Device"
+            >
+              {devices.map((device) => (
+                <MenuItem key={device._id} value={device._id}>
+                  {device.deviceName}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+      </Grid>
+
+      {/* Loading indicator */}
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <CircularProgress />
+        </Box>
+      )}
+      
+      {/* Tab navigation with new Tabs component */}
+      {selectedDevice && !loading && (
+        <>
+          {/* Using MUI Tabs component instead of custom buttons */}
+          <Paper sx={{ mb: 3 }}>
+            <Tabs 
+              value={activeTab} 
+              onChange={handleTabChange}
+              indicatorColor="primary"
+              textColor="primary"
+              variant="fullWidth"
+            >
+              <Tab 
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <span>Status</span>
+                    {activeTab === "status" && (
+                      <Typography variant="caption" sx={{ ml: 1 }}>
+                        ({getConnectionStatus()})
+                      </Typography>
+                    )}
+                  </Box>
+                } 
+                value="status" 
+              />
+              <Tab 
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <span>Alarms</span>
+                    {activeTab === "alarms" && latestEntry && (
+                      <Typography variant="caption" sx={{ ml: 1 }}>
+                        ({latestEntry.openAlerts || 0})
+                      </Typography>
+                    )}
+                  </Box>
+                } 
+                value="alarms" 
+              />
+              <Tab label="Command Center" value="cmd" />
+            </Tabs>
+          </Paper>
+
+          {/* Error message */}
+          {error && (
+            <Paper 
               sx={{ 
-                display: 'flex',
-                border: 1,
-                borderColor: 'divider',
-                borderRadius: 1,
-                overflow: 'hidden'
+                p: 2, 
+                mb: 3, 
+                bgcolor: 'error.light', 
+                color: 'error.main',
+                borderRadius: 1
               }}
             >
-              <Button 
-                variant={activeTab === "status" ? "contained" : "text"}
-                onClick={() => setActiveTab("status")}
-                sx={{ 
-                  flex: 1, 
-                  py: 1.5,
-                  borderRadius: 0,
-                  color: activeTab === "status" ? "#fff" : "inherit",
-                  backgroundColor: activeTab === "status" ? "#1976d2" : "transparent"
-                }}
-              >
-                Status
-                {activeTab === "status" && (
-                  <Typography variant="caption" sx={{ ml: 1 }}>
-                    {getConnectionStatus()}
-                  </Typography>
-                )}
-              </Button>
-              
-              <Divider orientation="vertical" flexItem />
-              
-              <Button 
-                variant={activeTab === "alarms" ? "contained" : "text"}
-                onClick={() => setActiveTab("alarms")}
-                sx={{ 
-                  flex: 1, 
-                  py: 1.5,
-                  borderRadius: 0,
-                  color: activeTab === "alarms" ? "#fff" : "inherit",
-                  backgroundColor: activeTab === "alarms" ? "#1976d2" : "transparent"
-                }}
-              >
-                Alarms
-                {activeTab === "alarms" && latestEntry && (
-                  <Typography variant="caption" sx={{ ml: 1 }}>
-                    {latestEntry.openAlerts || 0} Open Alerts
-                    
-              
-
-                  </Typography>
-                )}
-              </Button>
-              
-              <Divider orientation="vertical" flexItem />
-              
-              <Button 
-                variant={activeTab === "cmd" ? "contained" : "text"}
-                onClick={() => setActiveTab("cmd")}
-                sx={{ 
-                  flex: 1, 
-                  py: 1.5,
-                  borderRadius: 0,
-                  color: activeTab === "cmd" ? "#fff" : "inherit",
-                  backgroundColor: activeTab === "cmd" ? "#1976d2" : "transparent"
-                }}
-              >
-                Command Center
-              </Button>
-            </Box>
-
-            {/* Error message */}
-            {error && (
-              <Paper 
-                sx={{ 
-                  p: 2, 
-                  mt: 2, 
-                  bgcolor: 'error.light', 
-                  color: 'error.main',
-                  borderRadius: 1
-                }}
-              >
-                <Typography>{error}</Typography>
-              </Paper>
+              <Typography>{error}</Typography>
+            </Paper>
+          )}
+          
+          {/* Tab content */}
+          <Box>
+            {activeTab === "status" && (
+              <>
+                {renderDeviceMetrics()}
+                {renderCharts()}
+              </>
             )}
             
-            {/* Tab content */}
-            <Box sx={{ mt: 3 }}>
-              {activeTab === "status" && (
-                <>
-                  {renderDeviceMetrics()}
-                  {renderCharts()}
-                </>
-              )}
-              
-              {activeTab === "alarms" && renderAlarmsTab()}
-              
-              {activeTab === "cmd" && renderCommandCenterTab()}
-            </Box>
-          </>
-        )}
-      </Container>
-    </Box>
+            {activeTab === "alarms" && renderAlarmsTab()}
+            
+            {activeTab === "cmd" && renderCommandCenterTab()}
+          </Box>
+        </>
+      )}
+    </Container>
   );
+
+  return <>{dashboardContent}</>;
 };
 
 export default TelemetryDashboard;

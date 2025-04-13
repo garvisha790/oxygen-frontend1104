@@ -1,61 +1,73 @@
-import React, { useContext } from "react";
-import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import MainDashboard from "./pages/MainDashboard";
-import PlantDashboard from "./pages/PlantDashboard";
-import DeviceDashboard from "./pages/DeviceDashboard";  
-import TelemetryDashboard from "./pages/TelemetryDashboard";  // ✅ Import Telemetry Dashboard
-import { AuthContext, AuthProvider } from "./context/AuthContext";
+//app.js
+ 
+import React from 'react';
 
-const PrivateRoute = ({ children }) => {
-  const { isAuthenticated } = useContext(AuthContext);
-  return isAuthenticated ? children : <Navigate to="/" />;
-};
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
+import { AuthProvider } from './context/AuthContext';
+
+import { AlarmProvider } from './context/alarmContext';
+
+import Layout from './components/Layout';
+
+import Login from './pages/Login';
+
+import Register from './pages/Register';
+
+import MainDashboard from './pages/MainDashboard';
+
+import PlantDashboard from './pages/PlantDashboard';
+
+import DeviceDashboard from './pages/DeviceDashboard';
+
+import TelemetryDashboard from './pages/TelemetryDashboard';
+import PrivateRoute from './components/PrivateRoute';
+
+ 
 function App() {
-  return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route
-            path="/dashboard"
-            element={
-              <PrivateRoute>
-                <MainDashboard />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/plant-dashboard"
-            element={
-              <PrivateRoute>
-                <PlantDashboard />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/device-dashboard"
-            element={
-              <PrivateRoute>
-                <DeviceDashboard />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/telemetry-dashboard"   // ✅ Telemetry Dashboard Route added
-            element={
-              <PrivateRoute>
-                <TelemetryDashboard />
-              </PrivateRoute>
-            }
-          />
-        </Routes>
-      </Router>
-    </AuthProvider>
-  );
-}
 
+  return (
+<Router>
+<AuthProvider>
+<AlarmProvider>
+<Routes>
+<Route path="/login" element={<Login />} />
+<Route path="/register" element={<Register />} />
+<Route path="/" element={<PrivateRoute />}>
+
+<Route path="dashboard" element={
+<Layout>
+<MainDashboard />
+</Layout>
+
+              } />
+<Route path="plant-dashboard" element={
+<Layout>
+<PlantDashboard />
+</Layout>
+
+              } />
+<Route path="device-dashboard" element={
+<Layout>
+<DeviceDashboard />
+</Layout>
+
+              } />
+<Route path="telemetry-dashboard" element={
+<Layout>
+<TelemetryDashboard />
+</Layout>
+
+              } />
+</Route>
+</Routes>
+</AlarmProvider>
+</AuthProvider>
+</Router>
+
+  );
+
+}
+ 
 export default App;
+ 
