@@ -5,13 +5,15 @@ import { getThresholdValue, updateThresholdValue } from '../services/telemetrySe
 import axios from 'axios';
 import Layout from "../components/Layout";
 import AlarmsTab from '../components/siteView/AlarmsTab';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+
 
 import { 
   getLatestTelemetryEntry, 
   getRealtimeTelemetryData, 
   getTelemetryData,
-  clearDeviceCache 
+  clearDeviceCache,
+  restartDevice
 } from "../services/telemetryService";
 import { Line } from "react-chartjs-2";
 import TextField from '@mui/material/TextField';
@@ -172,9 +174,15 @@ const TelemetryDashboard = () => {
     }
   }, [tabFromURL]);
 
+  const navigate = useNavigate();
+
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+    const params = new URLSearchParams(location.search);
+    params.set('tab', newValue);
+    navigate({ search: params.toString() });
   };
+
 
   const chartOptions = {
     responsive: true,
@@ -329,25 +337,16 @@ const TelemetryDashboard = () => {
   }, [selectedDevice, selectedConfigType]);
 
   const handleThresholdUpdate = async () => {
-    if (!newThreshold || isNaN(newThreshold)) return alert("Please enter a valid number");
+    if (!selectedMetric || !newThreshold || isNaN(newThreshold)) {
+      alert("Please select a metric and enter a valid number");
+      return;
+    }
     
     try {
-      // Create command payload using the correct format
-      const commandPayload = {
-        deviceName: devices.find(d => d._id === selectedDevice)?.deviceName || "esp32_02",
-        command: "updateThreshold",
-        value: {
-          [`${selectedConfigType}Threshold`]: parseInt(newThreshold)
-        }
-      };
+      const success = await updateThresholdValue(selectedDevice, selectedMetric, parseFloat(newThreshold));
       
-      // Send command to the correct endpoint using axios
-      const response = await axios.post('http://localhost:3000/api/device/command', commandPayload);
-
-      console.log('Command sent:', response.data);
-      
-      if (response.status === 200) {
-        alert(`${selectedConfigType} threshold updated successfully!`);
+      if (success) {
+        alert(`${selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1)} threshold updated successfully!`);
         setCurrentThreshold(newThreshold);
         setNewThreshold('');
       } else {
@@ -356,6 +355,28 @@ const TelemetryDashboard = () => {
     } catch (error) {
       console.error("Error updating threshold:", error);
       alert("Failed to update threshold. Try again.");
+    }
+  };
+
+  const handleRestartDevice = async () => {
+    if (!selectedDevice) {
+      alert("Please select a device first");
+      return;
+    }
+    
+    if (window.confirm(`Are you sure you want to restart this device?`)) {
+      try {
+        const success = await restartDevice(selectedDevice);
+        
+        if (success) {
+          alert("Restart command sent successfully!");
+        } else {
+          alert("Failed to restart device. Try again.");
+        }
+      } catch (error) {
+        console.error("Error restarting device:", error);
+        alert("Failed to restart device. Try again.");
+      }
     }
   };
   
@@ -418,7 +439,7 @@ const TelemetryDashboard = () => {
       default: return "Unknown";
     }
   };
-  
+  console.log("LAtest Entry:", latestEntry);
   const renderAlarmsTab = () => {
     return (
       <Box sx={{ textAlign: 'center', py: 2 }}>
@@ -483,74 +504,24 @@ const TelemetryDashboard = () => {
         variant="contained"
         fullWidth
         onClick={handleThresholdUpdate}
-        disabled={!selectedConfigType || !newThreshold}
+        disabled={!selectedMetric || !newThreshold}
         sx={{ mb: 2 }}
       >
         Update Threshold
       </Button>
 
-      {/* Send Command Button */}
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Command Type</InputLabel>
-        <Select
-          value={selectedCommandType}
-          onChange={(e) => setSelectedCommandType(e.target.value)}
-          label="Command Type"
-        >
-          <MenuItem value="updateThreshold">Update Threshold</MenuItem>
-          <MenuItem value="restart">Restart Device</MenuItem>
-          <MenuItem value="factoryReset">Factory Reset</MenuItem>
-        </Select>
-      </FormControl>
-      
-      {/* Update Config Button */}
+      {/* Restart Device Button */}
       <Button
-        variant="outlined"
-        color="primary"
+        variant="contained"
+        color="error"
         fullWidth
-        onClick={async () => {
-          if (!selectedCommandType) {
-            alert('Please select a command type');
-            return;
-          }
-
-          try {
-            // Prepare the command payload based on selected command type
-            let commandPayload = {
-              deviceName: devices.find(d => d._id === selectedDevice)?.deviceName || "esp32_02",
-              command: selectedCommandType
-            };
-
-            // For updateThreshold command, add value parameter with threshold data
-            if (selectedCommandType === "updateThreshold" && selectedConfigType) {
-              commandPayload.value = {
-                [`${selectedConfigType}Threshold`]: parseInt(newThreshold || currentThreshold)
-              };
-            }
-
-            // Use axios instead of fetch
-            const response = await axios.post('http://localhost:3000/api/device/command', commandPayload, {  
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-              }
-            });
-            
-            console.log('Command sent:', response.data);
-            alert(`Command ${selectedCommandType} sent successfully`);
-          } catch (err) {
-            console.error('Error sending command:', err);
-            alert('Failed to send command');
-          }
-        }}
+        onClick={handleRestartDevice}
       >
-        Send Command
+        Restart Device
       </Button>
     </Box>
   );
   
-  // Render device metrics in the status tab
   const renderDeviceMetrics = () => {
     if (!latestEntry) {
       return (

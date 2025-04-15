@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from "react";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+
 import axios from "axios";
 import {
   Typography,
@@ -14,9 +17,9 @@ import {
   MenuItem,
   Button,
   Grid,
-  Box,
-  
+  IconButton,
 } from "@mui/material";
+import { Edit, Delete } from "@mui/icons-material";
 import Layout from "../components/Layout";
 
 const PlantDashboard = () => {
@@ -187,27 +190,31 @@ const PlantDashboard = () => {
                 <TableCell sx={{ color: "white", fontWeight: "bold" }}>Location</TableCell>
                 <TableCell sx={{ color: "white", fontWeight: "bold" }}>Capacity</TableCell>
                 <TableCell sx={{ color: "white", fontWeight: "bold" }}>Status</TableCell>
-                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Actions</TableCell>
+                <TableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center" }}>Edit</TableCell>
+                <TableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center" }}>Delete</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {plants.map((plant) => (
-                <TableRow key={plant._id}>
-                  <TableCell>{plant.plantName}</TableCell>
-                  <TableCell>{plant.location}</TableCell>
-                  <TableCell>{plant.capacity}</TableCell>
-                  <TableCell>{plant.isActive ? "Active" : "Inactive"}</TableCell>
-                  <TableCell>
-                    <Button size="small" color="primary" onClick={() => handleEdit(plant)}>
-                      Edit
-                    </Button>
-                    <Button size="small" color="error" onClick={() => handleDelete(plant._id)}>
-                      Delete
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
+  {plants.map((plant) => (
+    <TableRow key={plant._id}>
+      <TableCell>{plant.plantName}</TableCell>
+      <TableCell>{plant.location}</TableCell>
+      <TableCell>{plant.capacity}</TableCell>
+      <TableCell>{plant.isActive ? "Active" : "Inactive"}</TableCell>
+      <TableCell align="center">
+        <Button onClick={() => handleEdit(plant)} color="primary">
+          <EditIcon />
+        </Button>
+      </TableCell>
+      <TableCell align="center">
+        <Button onClick={() => handleDelete(plant._id)} color="error">
+          <DeleteIcon />
+        </Button>
+      </TableCell>
+    </TableRow>
+  ))}
+</TableBody>
+
           </Table>
         </TableContainer>
       </Paper>

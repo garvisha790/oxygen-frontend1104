@@ -16,6 +16,7 @@ import Sidebar from "../components/Sidebar";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import AlarmNotification from "../components/siteView/alarmNotification";
 
 const drawerWidth = 200;
 
@@ -86,13 +87,16 @@ const MainDashboard = () => {
           >
             Oxygen Plant Monitor
           </Typography>
-          <IconButton
-            size="large"
-            onClick={handleMenu}
-            color="inherit"
-          >
-            <AccountCircleIcon />
-          </IconButton>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <AlarmNotification />
+            <IconButton
+              size="large"
+              onClick={handleMenu}
+              color="inherit"
+            >
+              <AccountCircleIcon />
+            </IconButton>
+          </div>
           <Menu
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
@@ -116,14 +120,14 @@ const MainDashboard = () => {
           bgcolor: "#ffffff",
           p: 3,
           minHeight: "100vh",
-          marginTop: "64px",
+          marginTop: "0.5px",
         }}
       >
         <Grid container spacing={3}>
           {/* Map Section */}
           <Grid item xs={12}>
             <Paper elevation={3} sx={{ borderRadius: "16px" }}>
-              <div style={{ height: "400px", width: "100%" }}>
+              <div style={{ height: "300px", width: "100%" }}>
                 <MapContainer
                   center={getSelectedLocation()}
                   zoom={12}

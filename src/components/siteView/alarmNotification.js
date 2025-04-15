@@ -57,7 +57,7 @@ const AlarmNotification = () => {
   };
  
   const handleViewAll = () => {
-    navigate('/telemetry-dashboard?Tab=alarms');
+    navigate('/telemetry-dashboard?tab=alarms');
     handleClose(); // If you want to close the dropdown/popover
   };
   

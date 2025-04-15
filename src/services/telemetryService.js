@@ -183,5 +183,19 @@ export const clearDeviceCache = (deviceId) => {
     console.log('🧹 Cleared all telemetry cache');
   }
 };
- 
- 
+
+/**
+ * Send a restart command to a device
+ */
+export const restartDevice = async (deviceId) => {
+  try {
+    console.log('🔄 Sending restart command to device:', deviceId);
+    const response = await axiosInstance.post(`${BASE_URL}/telemetry/command/${deviceId}`, {
+      command: 'restart'
+    });
+    return response.status === 200;
+  } catch (error) {
+    console.error("❌ Error restarting device:", error);
+    return false;
+  }
+};

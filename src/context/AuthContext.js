@@ -8,33 +8,39 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
- 
+
+  
+  
   useEffect(() => {
+    
     const storedToken = localStorage.getItem("token");
-    if (storedToken) {
-      try {
-        // Verify and decode token
-        const decodedToken = jwtDecode(storedToken);
-        // Check if token has expired
-        const currentTime = Date.now() / 1000;
-        if (decodedToken.exp && decodedToken.exp < currentTime) {
-          // Token expired, log out
-          handleLogout();
-        } else {
-          // Valid token
-          setToken(storedToken);
-          setIsAuthenticated(true);
-          setUser({
-            email: decodedToken.email || decodedToken.sub,
-            id: decodedToken.id || decodedToken.userId,
-          });
-        }
-      } catch (error) {
-        console.error("Invalid token:", error);
-        handleLogout();
+  
+    // 👇 Only logout if no token is found when app first loads
+    if (!storedToken) {
+      handleLogout(); // this will ensure isAuthenticated = false
+      return;
+    }
+  
+    try {
+      const decodedToken = jwtDecode(storedToken);
+      const currentTime = Date.now() / 1000;
+  
+      if (decodedToken.exp && decodedToken.exp < currentTime) {
+        handleLogout(); // token expired
+      } else {
+        setToken(storedToken);
+        setIsAuthenticated(true);
+        setUser({
+          email: decodedToken.email || decodedToken.sub,
+          id: decodedToken.id || decodedToken.userId,
+        });
       }
+    } catch (error) {
+      console.error("Invalid token:", error);
+      handleLogout(); // invalid token format
     }
   }, []);
+  
  
   const login = (authToken) => {
     try {
